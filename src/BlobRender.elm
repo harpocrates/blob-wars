@@ -44,6 +44,10 @@ renderBlobSpace theirTurn alerted ((i,j), bs) =
       ]
 
     -- position, shape, color of a blob
+    rxSize  = halfSize - cellSpace * 2
+    rxSize2 = halfSize - cellSpace * 3 // 2
+    rySize  = halfSize - cellSpace
+    rySize2 = halfSize - cellSpace // 2
     blobAttributes p =
       [ Svg.Attributes.cx (fromInt (jOffset + halfSize - halfSpace))
       , Svg.Attributes.cy (fromInt (iOffset + halfSize - halfSpace))
@@ -79,9 +83,28 @@ renderBlobSpace theirTurn alerted ((i,j), bs) =
              [ Svg.Events.onClick (SelectMe (i,j)) ]
           else 
              [ Svg.Events.onClick UnSelectMe ]
+
+        animations =
+          if alertedFallback == (i,j) then
+             [ Svg.animate
+                 [ Svg.Attributes.attributeName "ry"
+                 , Svg.Attributes.values (String.join ";" (List.map fromInt [rySize, rySize2, rySize]))
+                 , Svg.Attributes.dur "1.5s"
+                 , Svg.Attributes.repeatCount "indefinite"
+                 ] []
+             ,  Svg.animate
+                 [ Svg.Attributes.attributeName "rx"
+                 , Svg.Attributes.values (String.join ";" (List.map fromInt [rxSize2, rxSize, rxSize2]))
+                 , Svg.Attributes.dur "1.5s"
+                 , Svg.Attributes.repeatCount "indefinite"
+                 ] []
+
+             ]
+          else
+             []
       in
       [ Svg.rect rectAttributes []
-      , Svg.ellipse (extraAttrs ++ blobAttributes p) []
+      , Svg.ellipse (extraAttrs ++ blobAttributes p) animations
       ]
 
 

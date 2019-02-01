@@ -51,7 +51,8 @@ view { currentPlayer, selectedBlob, blobBoard, boardSize } =
     renderedBoard = Svg.svg
       [ Svg.Attributes.width size, Svg.Attributes.height size
       , Svg.Attributes.viewBox ("0 0 " ++ size ++ " " ++ size) ]
-      (List.concatMap (renderBlobSpace currentPlayer selectedBlob) blobBoard)
+      (tickingClock
+        :: List.concatMap (renderBlobSpace currentPlayer selectedBlob) blobBoard)
   in
   Html.div
     [ Html.Attributes.style "font-family"     "sans-serif"

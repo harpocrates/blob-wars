@@ -1,11 +1,11 @@
 module BlobRender exposing
-  ( renderBlobSpace, cellSize )
+  ( renderBlobSpace, tickingClock, cellSize )
 
 import GameState exposing (..)
 
 -- elm/core
 import Array
-import String exposing  ( fromInt )
+import String exposing  ( fromInt, fromFloat )
 
 -- elm/svg
 import Svg exposing ( Svg )
@@ -13,7 +13,7 @@ import Svg.Attributes
 import Svg.Events 
 
 -- Tunable
-cellSize = 40
+cellSize = 60
 cellSpace = 4
 
 -- Derived from tunable
@@ -21,6 +21,20 @@ halfSize = cellSize // 2
 halfSpace = cellSpace // 2
 rectSize = cellSize - cellSpace
 rectRounding = cellSpace
+
+{-| We keep a top-level clock element that always sticks around. This gives us
+a nice reliable tick event to latch on to. -}
+tickingClock : Svg msg
+tickingClock = Svg.circle [ Svg.Attributes.r "0" ]
+  [ Svg.animate [ Svg.Attributes.id "clockTick"
+                , Svg.Attributes.attributeType "XML"
+                , Svg.Attributes.attributeName "r"
+                , Svg.Attributes.from "0"
+                , Svg.Attributes.to "0"
+                , Svg.Attributes.begin ("0s; clockTick.end + 5")
+                , Svg.Attributes.dur "1s"
+                ] []
+  ]
 
 {-| Render one cell on the blob board -}
 renderBlobSpace : Player -> Maybe BlobIndex -> (BlobIndex, BlobSpace) -> List (Svg Msg)
@@ -76,36 +90,94 @@ renderBlobSpace theirTurn alerted ((i,j), bs) =
     -- we need to support unselecting too
     Occupied p ->
       let
+        isAlerted = alertedFallback == (i,j)
+        blobIdPrefix = "blob" ++ fromInt i ++ "at" ++ fromInt j
+        blockBlinkingOffset = modBy 5 (i * 223 + j * 293)
         extraAttrs =
-          if alertedFallback == (i,j) then
+          if isAlerted then
              [ Svg.Attributes.stroke "black", Svg.Events.onClick UnSelectMe ]
           else if p == theirTurn then
              [ Svg.Events.onClick (SelectMe (i,j)) ]
           else 
              [ Svg.Events.onClick UnSelectMe ]
-
-        animations =
-          if alertedFallback == (i,j) then
-             [ Svg.animate
-                 [ Svg.Attributes.attributeName "ry"
-                 , Svg.Attributes.values (String.join ";" (List.map fromInt [rySize, rySize2, rySize]))
-                 , Svg.Attributes.dur "1.5s"
-                 , Svg.Attributes.repeatCount "indefinite"
-                 ] []
-             ,  Svg.animate
-                 [ Svg.Attributes.attributeName "rx"
-                 , Svg.Attributes.values (String.join ";" (List.map fromInt [rxSize2, rxSize, rxSize2]))
-                 , Svg.Attributes.dur "1.5s"
-                 , Svg.Attributes.repeatCount "indefinite"
-                 ] []
-
-             ]
-          else
-             []
       in
       [ Svg.rect rectAttributes []
-      , Svg.ellipse (extraAttrs ++ blobAttributes p) animations
+      , Svg.g (Svg.Attributes.transform ("translate(" ++ fromInt (jOffset + halfSize - halfSpace) ++ ","
+                                                      ++ fromInt (iOffset + halfSize - halfSpace)
+                                                      ++ ")" ++
+                                         "scale(" ++ fromFloat (cellSize / 20) ++ ")")
+                 :: extraAttrs)
+              [ blob blobIdPrefix isAlerted p  blockBlinkingOffset ]
       ]
 
+
+type alias IdPrefix = String
+type alias Alerted  = Bool
+
+{-| Produce a blinking blob centered between its eyes -}
+blob : IdPrefix -> Alerted -> Player -> Int -> Svg msg
+blob idPrefix alerted colour startBlinkingAt =
+  let
+    -- eyebrows and smirk
+    alertedFeatures =
+      if alerted then
+        [ Svg.path [ Svg.Attributes.d "M 0.2,-2 L 2,-4" ] []
+        , Svg.path [ Svg.Attributes.d "M-0.2,-2 L-2,-4" ] []
+        , Svg.path [ Svg.Attributes.d "M-2,4 Q2,4 2,3z" ] []
+        ]
+      else
+        []
+
+    -- blinking eye
+    eye idPref xPos = Svg.ellipse
+      [ Svg.Attributes.cx xPos
+      , Svg.Attributes.cy "0"
+      , Svg.Attributes.rx "1.5"
+      , Svg.Attributes.ry "2"
+      ]
+      [ Svg.animate [ Svg.Attributes.id (idPref ++ "Close")
+                    , Svg.Attributes.attributeType "XML"
+                    , Svg.Attributes.attributeName "ry"
+                    , Svg.Attributes.from "2"
+                    , Svg.Attributes.to "0.2"
+                    , Svg.Attributes.begin ("clockTick.end + " ++ fromInt startBlinkingAt)
+                    , Svg.Attributes.dur "0.15s"
+                    ] []
+      , Svg.animate [ Svg.Attributes.id (idPref ++ "Open")
+                    , Svg.Attributes.attributeType "XML"
+                    , Svg.Attributes.attributeName "ry"
+                    , Svg.Attributes.from "0.2"
+                    , Svg.Attributes.to "2"
+                    , Svg.Attributes.begin (idPref ++ "Close.end")
+                    , Svg.Attributes.dur "0.2s"
+                    ] []
+      ]
+
+  in
+  Svg.g []
+    [ -- The actual blob
+      Svg.path
+        [ Svg.Attributes.d "M0,9 Q8,9 4,-2 Q0,-10 -4,-2 Q-8,9 0,9"
+        , Svg.Attributes.fill colour
+        ] []
+    , -- Eyes
+      Svg.g
+        [ Svg.Attributes.fill "white"
+        , Svg.Attributes.stroke "black"
+        , Svg.Attributes.strokeWidth "0.4"
+        ]
+        (alertedFeatures ++
+          [ eye (idPrefix ++ "Left") "-2"
+          , eye (idPrefix ++ "Right") "2"
+          ])
+    , -- Pupils
+      Svg.g
+        [ Svg.Attributes.fill "black"
+        , Svg.Attributes.strokeWidth "0"
+        ]
+        [ Svg.circle [ Svg.Attributes.cx "-2", Svg.Attributes.cy "0", Svg.Attributes.r "0.6" ] []
+        , Svg.circle [ Svg.Attributes.cx  "2", Svg.Attributes.cy "0", Svg.Attributes.r "0.6" ] []
+        ]
+    ]
 
 

@@ -17,7 +17,8 @@ type alias GameState =
      , currentPlayer : Player          {- must be in 'players'!   -}
      , selectedBlob  : Maybe BlobIndex {- must be in 'blobBoard'! -}
      , blobBoard     : BlobBoard
-     , boardSize     : Int             {- sidelength of board     -} 
+     , boardHeight   : Int             {- height of board         -}
+     , boardWidth    : Int             {- width of board          -}
      }
 
 {-| A player is a color name (which must be recognized in HTML) -}
@@ -48,10 +49,18 @@ type Msg
 -- * Sample initial game state
 ------------------
 
-{-| Helper to convert from nested lists into 'BlobBoard' -} 
+{-| Helper to convert from nested lists into 'BlobBoard' -}
 boardCells : List (List BlobSpace) -> List (BlobIndex, BlobSpace)
 boardCells = List.indexedMap (\i -> List.indexedMap (\j cell -> ((i,j), cell)))
           >> List.concat
+
+{-| Helper to extract the height of a board from nested lists -}
+boardRows : List (List BlobSpace) -> Int
+boardRows = List.length
+
+{-| Helper to extract the height of a board from nested lists -}
+boardColumns : List (List BlobSpace) -> Int
+boardColumns = List.map List.length >> List.maximum >> Maybe.withDefault 0
 
 -- We could easily accomodate more than 2 players...
 blue = Occupied "blue"
@@ -59,21 +68,33 @@ red  = Occupied "red"
 
 -- We could get much more creative with boards...
 board =
-  boardCells [ [ blue,    Vacant, Vacant, Vacant,  Vacant, Vacant, Invalid ]
-             , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
-             , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
-             , [ Vacant,  Vacant, Vacant, Invalid, Vacant, Vacant, Vacant  ]
-             , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
-             , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
-             , [ Invalid, Vacant, Vacant, Vacant,  Vacant, Vacant, red     ] ]
+  [ [ blue,    Vacant, Vacant, Invalid,  Vacant, Vacant, Invalid ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Vacant,  Invalid, Vacant, Vacant,  Vacant, Invalid, Vacant  ]
+  , [ Invalid,  Vacant, Vacant, Invalid, Vacant, Vacant, Invalid  ]
+  , [ Invalid,  Vacant, Vacant, Invalid, Vacant, Vacant, Invalid  ]
+  , [ Invalid,  Vacant, Vacant, Invalid, Vacant, Vacant, Invalid  ]
+  , [ Vacant,  Invalid, Vacant, Vacant,  Vacant, Invalid, Vacant  ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Invalid, Vacant, Vacant, Invalid,  Vacant, Vacant, red     ] ]
+
+board2 =
+  [ [ blue,    Vacant, Vacant, Vacant,  Vacant, Vacant, Invalid ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Vacant,  Vacant, Vacant, Invalid, Vacant, Vacant, Vacant  ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Vacant,  Vacant, Vacant, Vacant,  Vacant, Vacant, Vacant  ]
+  , [ Invalid, Vacant, Vacant, Vacant,  Vacant, Vacant, red     ] ]
 
 
 initialGameState = { players = Array.fromList ["blue", "red"]
                    , turnNumber = 0
                    , currentPlayer = "blue"
                    , selectedBlob = Nothing
-                   , blobBoard = board
-                   , boardSize = 7 }
+                   , blobBoard = boardCells board
+                   , boardHeight = boardRows board
+                   , boardWidth = boardColumns board }
 
 
 -- * Mutating game state

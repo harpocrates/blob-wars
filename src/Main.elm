@@ -42,15 +42,16 @@ update msg ({ currentPlayer } as model) =
                           |> advancePlayer
                           |> mapBoard (setCell from Vacant >>
                                        convertCell to currentPlayer)
-    
+
 {-| Render the game state into a div -}
 view : GameState -> Html Msg
-view { currentPlayer, selectedBlob, blobBoard, boardSize } =
+view { currentPlayer, selectedBlob, blobBoard, boardHeight, boardWidth } =
   let
-    size = fromInt (cellSize * boardSize)
+    sizeHeight = fromInt (cellSize * boardHeight)
+    sizeWidth = fromInt (cellSize * boardWidth)
     renderedBoard = Svg.svg
-      [ Svg.Attributes.width size, Svg.Attributes.height size
-      , Svg.Attributes.viewBox ("0 0 " ++ size ++ " " ++ size) ]
+      [ Svg.Attributes.width sizeWidth, Svg.Attributes.height sizeHeight
+      , Svg.Attributes.viewBox ("0 0 " ++ sizeWidth ++ " " ++ sizeHeight) ]
       (tickingClock
         :: List.concatMap (renderBlobSpace currentPlayer selectedBlob) blobBoard)
   in
@@ -65,7 +66,7 @@ view { currentPlayer, selectedBlob, blobBoard, boardSize } =
     ]
     [ Html.div []
                [ Html.h3 [ Html.Attributes.style "color" currentPlayer ]
-                         [ Html.text ("It is " ++ currentPlayer ++ "'s turn") ] 
+                         [ Html.text ("It is " ++ currentPlayer ++ "'s turn") ]
                , renderedBoard
                , Html.br [] []
                , Html.button [ Html.Events.onClick PassTurn ] [ Html.text "Skip Turn" ]

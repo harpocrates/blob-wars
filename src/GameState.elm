@@ -1,11 +1,12 @@
 module GameState exposing
-  ( GameState, Player, BlobBoard, BlobIndex, BlobSpace(..), Msg(..)
+  ( GameState, Player, BlobBoard, BlobIndex, BlobSpace(..), Msg(..), scoreBoard
   , initialGameState
   , distance, advancePlayer, setAlertBlob, mapBoard, setCell, convertCell
   )
 
 -- elm/core
 import Array exposing ( Array )
+import Dict exposing ( Dict, update, empty )
 
 -- * The game state
 ---------------------
@@ -45,6 +46,14 @@ type Msg
      | NewGame                       {- click on the new game button          -}
      | PassTurn                      {- click on the pass turn button         -}
 
+{-| Given a board, tabulate the current score -}
+scoreBoard : BlobBoard -> Dict Player Int
+scoreBoard =
+  List.foldl
+    (\b -> case b of
+             (_, (Occupied p)) -> Dict.update p (Maybe.withDefault 0 >> (+) 1 >> Just)
+             _                 -> identity)
+    Dict.empty
 
 -- * Sample initial game state
 ------------------
